@@ -1,9 +1,8 @@
 #include <iostream>
-#include <ctime>
 #include <unistd.h>
 
 pthread_mutex_t mutex;
-struct timespec ts;
+timespec ts;
 
 typedef struct{
 	int flag;
@@ -15,14 +14,13 @@ void *first(void *arg1){
 	std::cout << "1st stream started" << '\n';
 	t_Args *args = (t_Args*) arg1;
 	while(args->flag == 0){
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec++;
-		int flag = pthread_mutex_timedlock(&mutex, &ts);
-		if(!flag){
-			pthread_mutex_lock(&mutex); //Entering critical area
-			std::cout << "1st stream locked mutex" << '\n';
-			break;
-		}else std::cerr << "1st stream couldn't lock mutex" << '\n';
+		while(true){
+			clock_gettime(CLOCK_REALTIME, &ts);
+			ts.tv_sec += 1;
+			int res = pthread_mutex_timedlock(&mutex, &ts);
+			if(res == 0) break; //Entering critical area
+			else{};
+		}
 		for(int i = 0; i < 10; i++){
 			putchar(args->sym);
 			fflush(stdout);
@@ -40,14 +38,13 @@ void *second(void *arg2){
 	std::cout << "2nd stream started" << '\n';
 	t_Args *args = (t_Args*) arg2;
 	while(args->flag == 0){
-		clock_gettime(CLOCK_REALTIME, &ts);
-		ts.tv_sec++;
-		int flag = pthread_mutex_timedlock(&mutex, &ts);
-		if(!flag){
-			pthread_mutex_lock(&mutex); //Entering critical area
-			std::cout << "2nd stream locked mutex" << '\n';
-			break;
-		}else std::cerr << "2nd stream couldn't lock mutex" << '\n';
+		while(true){
+			clock_gettime(CLOCK_REALTIME, &ts);
+			ts.tv_sec += 1;
+			int res = pthread_mutex_timedlock(&mutex, &ts);
+			if(res == 0) break; //Entering critical area
+			else{};
+		}
 		for(int i = 0; i < 10; i++){
 			putchar(args->sym);
 			fflush(stdout);
