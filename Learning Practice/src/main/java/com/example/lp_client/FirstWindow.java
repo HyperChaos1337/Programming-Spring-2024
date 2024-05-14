@@ -247,7 +247,7 @@ public class FirstWindow extends Application {
             printReceivedData(gridPane);
             if(gridPane.getChildren().isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
-                qrStatusLabel.setText("На данный момент все заявки закодированы. Вернитесь позже");
+                qrStatusLabel.setText("Нет доступных заявок для создания QR. Вернитесь позже");
                 getButton.setVisible(false);
             }
             else{
