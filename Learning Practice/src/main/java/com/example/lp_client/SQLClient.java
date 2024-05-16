@@ -20,10 +20,10 @@ public class SQLClient {
         return connection != null && !connection.isClosed();
     }
 
-    public void insertData(int id, String applicant, String manager,
+    public void insertData(String tableName, int id, String applicant, String manager,
                            String address, String matter, String contents,
                            String resolution, String additionalInfo) throws SQLException {
-        String sql = "INSERT INTO requests (id, applicant, manager, address, matter, contents, " +
+        String sql = "INSERT INTO " + tableName + " (id, applicant, manager, address, matter, contents, " +
                 "resolution, status, additional_info) VALUES (?, ?, ?, ?, ?, ?, ?, null, ?)";
         try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/Office1",
                 "postgres", "ChaosNova2020");
@@ -44,12 +44,31 @@ public class SQLClient {
             System.err.println(e.getMessage());
         }
     }
-    public String getEachID(){
+
+    void updateData(String tableName, String resolution, boolean status, String info, int id){
+        String sql = "UPDATE " + tableName + " SET resolution = (?), status = (?), additional_info = (?) WHERE id = (?)";
+        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/Office1",
+                "postgres", "ChaosNova2020");
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, resolution);
+            pstmt.setBoolean(2, status);
+            pstmt.setString(3, info);
+            pstmt.setInt(4, id);
+
+            pstmt.executeUpdate();
+
+        } catch (SQLException e) {
+            System.err.println(e.getMessage());
+        }
+    }
+
+    public String getEachID(String tableName){
         StringBuilder data = new StringBuilder();
         try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/Office1",
                 "postgres", "ChaosNova2020");
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT id FROM requests WHERE status IS NULL")) {
+             ResultSet rs = stmt.executeQuery("SELECT id FROM " + tableName + " WHERE status IS NULL")) {
             while (rs.next()) {
                 int id = rs.getInt("id");
                 data.append(id);
@@ -60,8 +79,26 @@ public class SQLClient {
         }
         return data.toString();
     }
-    public String getCurrentID(int id) throws SQLException {
-        String sql = "SELECT * FROM requests WHERE id = ?";
+
+    public String getEachSeenID(String tableName){
+        StringBuilder data = new StringBuilder();
+        try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/Office1",
+                "postgres", "ChaosNova2020");
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT id FROM " + tableName + " WHERE status IS NOT NULL")) {
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                data.append(id);
+                data.append("; ");
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка при получении данных из БД: " + e.getMessage());
+        }
+        return data.toString();
+    }
+
+    public String getCurrentID(String tableName, int id) throws SQLException {
+        String sql = "SELECT * FROM " +  tableName + " WHERE id = ?";
         StringBuilder recordString = new StringBuilder();
 
         try (Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/Office1",

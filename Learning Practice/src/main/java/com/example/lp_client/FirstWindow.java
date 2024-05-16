@@ -16,6 +16,8 @@ import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Objects;
 
 public class FirstWindow extends Application {
@@ -25,25 +27,45 @@ public class FirstWindow extends Application {
     SQLClient client = new SQLClient();
 
     TextField applicantField, managerField, addressField,
-            matterField, contentsField, numberField;
+            matterField, contentsField;
     Label mainLabel, applicantLabel, managerLabel, addressLabel,
             matterLabel, contentsLabel, statusLabel, qrStatusLabel;
+
+    TextField numberField = new TextField();
 
     Button connectButton = new Button("Подключение к бд");
 
     Button userButton = new Button("Я заявитель");
     Button chancelleryButton = new Button("Я работник канцелярии");
     Button firstWorkerButton = new Button("Я работник офиса 1");
+    Button managerButton = new Button("Я руководитель");
     Button secondWorkerButton = new Button("Я работник офиса 2");
 
     Button senderButton = new Button("Отправить заявку");
+    Button sendToDataBaseButton = new Button("Отправить результат в БД 1");
 
     Button returnButton = new Button("Выйти из приложения");
 
-    Button getButton = new Button("Посмотреть номера текущих заявок");
+    Button getUnpreparedDataButton = new Button("Посмотреть номера текущих заявок");
+    Button getSeenDataButton = new Button("Посмотреть номера рассмотренных заявок");
+    Button getPreparedDataButton = new Button("Просмотреть номера распечатанных заявок");
+    Button getSentDataButton = new Button("Просмотреть номера рассматриваемых заявок");
     Button printRequestButton = new Button("Перейти к заявке под номером");
-    Button encodeButton = new Button("Записать обращение в QR-Код");
-    Button decodeButton = new Button("Декодировать QR-Код");
+
+    Button encodeButton = new Button("Записать обращение QR-Код");
+    Button decodeButton = new Button("Декодировать из QR-Кода обращение");
+    Button resolutionButton = new Button("Перейти к резолюции по обращению");
+
+    Label resolutionLabel = new Label("Резолюция");
+    Label statusRenewLabel = new Label("Статус");
+    Label infoLabel = new Label("Дополнительная информация");
+
+    TextField resolutionField = new TextField();
+    boolean value = false;
+    Button toggleButton = new Button(String.valueOf(false));
+
+    Button setResolution = new Button("Создать резолюцию");
+    TextField infoField = new TextField();
 
     public void connectToDataBase(){
         try {
@@ -75,7 +97,7 @@ public class FirstWindow extends Application {
         else{
             try {
                 int id = IDGenerator.generateUniqueID();
-                client.insertData(id, applicant, manager, address,
+                client.insertData("requests" ,id, applicant, manager, address,
                         matter, contents, "Рассматривается", "По усмотрению руководителя");
                 statusLabel.setTextFill(Color.GREEN);
                 statusLabel.setText("Заявка принята! Ее номер: " + String.valueOf(id));
@@ -91,14 +113,18 @@ public class FirstWindow extends Application {
         }
     }
 
-    public String[] getFromDataBase(){
-        return client.getEachID().split("; ");
+    public String[] getUnseenFromDataBase(String tableName){
+        return client.getEachID(tableName).split("; ");
     }
 
-    public void printReceivedData(GridPane gridPane){
-        numberField = new TextField();
+    public String[] getSeenFromDataBase(String tableName){
+        return client.getEachSeenID(tableName).split("; ");
+    }
+
+
+    public void printReceivedData(GridPane gridPane, String tableName){
         int row = 0, col = 0;
-        for(String data: getFromDataBase()){
+        for(String data: getUnseenFromDataBase(tableName)){
             String filename = "request_ID_" + data + ".png";
             File file = new File(filename);
             if (!file.exists()) {
@@ -111,12 +137,44 @@ public class FirstWindow extends Application {
                 }
             }
         }
-
     }
 
-    GridPane getDataFromID() throws SQLException {
+    public void printEncodedData(GridPane gridPane, String tableName){
+        int row = 0, col = 0;
+        String[] existingData = getUnseenFromDataBase("printed_requests");
+        for(String data: getUnseenFromDataBase(tableName)){
+                for(String isDecoded: existingData){
+                String filename = "request_ID_" + data + ".png";
+                File file = new File(filename);
+                if (!file.exists() && Objects.equals(data, isDecoded)) {
+                    Label idLabel = new Label(data);
+                    gridPane.add(idLabel, row, col);
+                    col++;
+                    if (col == 5) {
+                        col = 0;
+                        row++;
+                    }
+                }
+            }
+        }
+    }
+
+    public void printScannedData(GridPane gridPane, String tableName){
+        int row = 0, col = 0;
+        for(String data: getSeenFromDataBase(tableName)){
+            Label idLabel = new Label(data);
+            gridPane.add(idLabel, row, col);
+            col++;
+            if (col == 5) {
+                col = 0;
+                row++;
+            }
+        }
+    }
+
+    GridPane getDataFromID(String tableName) throws SQLException {
         int id = Integer.parseInt(numberField.getText());
-        String data = client.getCurrentID(id);
+        String data = client.getCurrentID(tableName, id);
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
         grid.setHgap(50);
@@ -126,8 +184,6 @@ public class FirstWindow extends Application {
         for (int i = 0; i < entries.length; i++) {
             String[] parts = entries[i].split(": ");
             if (parts.length == 2) {
-                if(Objects.equals(parts[0], "status"))
-                    parts[1] = "На рассмотрении";
                 Label columnName = new Label(parts[0]);
                 Label columnValue = new Label(parts[1]);
                 columnValue.setPrefWidth(400);
@@ -140,16 +196,66 @@ public class FirstWindow extends Application {
         return grid;
     }
 
-    void encodeSingleData() throws SQLException, IOException, WriterException {
+    public void prepareToSend(String dataToSend) throws SQLException {
+        ArrayList<String> data = new ArrayList<>();
+        String[] pairs = dataToSend.split("; ");
+        for(String current: pairs){
+            String[] entries = current.split(": ");
+            data.add(entries[1]);
+        }
+        client.insertData("printed_requests", Integer.parseInt(data.get(0)),
+                data.get(1), data.get(2), data.get(3), data.get(4),
+                data.get(5), data.get(6), data.get(8));
+    }
+
+    void encodeSingleData(String tableName) throws SQLException, IOException, WriterException {
         int id = Integer.parseInt(numberField.getText());
-        String data = client.getCurrentID(id);
+        String data = client.getCurrentID(tableName ,id);
         QRCodeTool.generateQRCode(data, id);
     }
 
-    void decodeSingleData(){
+    String decodeSingleData() throws SQLException {
         String id = numberField.getText();
-        String data = QRCodeTool.decodeQRCode("request_ID_" + id + ".png");
-        System.out.println(data);
+        return QRCodeTool.decodeQRCode("request_ID_" + id + ".png");
+    }
+
+    public GridPane dataToResolution(String inputString) {
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(25, 25, 25, 25));
+
+        String[] entries = inputString.split("; ");
+        for (int i = 0; i < entries.length-3; i++) {
+            String[] parts = entries[i].split(": ");
+            if (parts.length == 2) {
+                Label columnName = new Label(parts[0]);
+                Label columnValue = new Label(parts[1]);
+
+                grid.add(columnName, 0, i);
+                grid.add(columnValue, 1, i);
+            }
+        }
+
+        toggleButton.setPadding(new Insets(10));
+        toggleButton.setOnAction(event -> {
+            value = !value;
+            toggleButton.setText(String.valueOf(value));
+        });
+
+        grid.add(resolutionLabel, 0, entries.length-3);
+        grid.add(statusRenewLabel, 0, entries.length-2);
+        grid.add(infoLabel, 0, entries.length-1);
+        grid.add(resolutionField, 1, entries.length-3);
+        grid.add(toggleButton, 1, entries.length-2);
+        grid.add(infoField, 1,entries.length-1);
+
+        return grid;
+    }
+
+    void sendResolution(String tableName, String resolution, boolean status, String info, int id){
+        client.updateData(tableName, resolution, status, info, id);
     }
 
     void connectionMenu(Stage stage){
@@ -164,7 +270,8 @@ public class FirstWindow extends Application {
     }
 
     void mainMenu(Stage stage){
-        VBox vBox = new VBox(userButton, chancelleryButton, firstWorkerButton, secondWorkerButton);
+        VBox vBox = new VBox(userButton, chancelleryButton, managerButton,
+                firstWorkerButton, secondWorkerButton);
         vBox.setAlignment(Pos.CENTER);
         vBox.setSpacing(20);
         Scene scene = new Scene(vBox, height, width);
@@ -232,28 +339,54 @@ public class FirstWindow extends Application {
         root.setPadding(new Insets(25, 25, 25, 25));
         root.getChildren().add(qrStatusLabel);
         root.getChildren().add(returnButton);
-        root.getChildren().add(getButton);
-        getButton.setVisible(true);
+        root.getChildren().add(getUnpreparedDataButton);
+        root.getChildren().add(getSeenDataButton);
+        getUnpreparedDataButton.setVisible(true);
         GridPane gridPane = new GridPane();
         gridPane.setAlignment(Pos.CENTER);
         gridPane.setHgap(10);
         gridPane.setVgap(10);
-        getButton.setOnAction(actionEvent -> {
-            if(getFromDataBase().length == 0){
+        getUnpreparedDataButton.setOnAction(actionEvent -> {
+            if(getUnseenFromDataBase("requests").length == 0){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
                 qrStatusLabel.setText("На данный момент все заявки рассмотрены. Вернитесь позже");
-                getButton.setVisible(false);
+                getUnpreparedDataButton.setVisible(false);
             }
-            printReceivedData(gridPane);
+            printReceivedData(gridPane, "requests");
             if(gridPane.getChildren().isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
                 qrStatusLabel.setText("Нет доступных заявок для создания QR. Вернитесь позже");
-                getButton.setVisible(false);
+                getUnpreparedDataButton.setVisible(false);
             }
             else{
                 gridPane.add(printRequestButton, 0, 6);
                 gridPane.add(numberField, 1, 6);
-                getButton.setVisible(true);
+                getUnpreparedDataButton.setVisible(true);
+            }
+        });
+        getSeenDataButton.setOnAction(actionEvent -> {
+            if(getSeenFromDataBase("printed_requests").length == 0){
+            qrStatusLabel.setTextFill(Color.YELLOWGREEN);
+            qrStatusLabel.setText("На данный момент все заявки рассмотрены. Вернитесь позже");
+            getSeenDataButton.setVisible(false);
+        }
+            printScannedData(gridPane, "printed_requests");
+            if(gridPane.getChildren().isEmpty()){
+                qrStatusLabel.setTextFill(Color.YELLOWGREEN);
+                qrStatusLabel.setText("Нет доступных заявок для создания QR. Вернитесь позже");
+                getSeenDataButton.setVisible(false);
+            }
+            else{
+                gridPane.add(printRequestButton, 0, 6);
+                gridPane.add(numberField, 1, 6);
+                getSeenDataButton.setVisible(true);
+            }
+        });
+        printRequestButton.setOnAction(actionEvent -> {
+            try {
+                printMenu(stage);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
             }
         });
         root.getChildren().add(gridPane);
@@ -267,15 +400,16 @@ public class FirstWindow extends Application {
         VBox vBox = new VBox();
         vBox.setAlignment(Pos.CENTER);
         vBox.setSpacing(20);
-        GridPane dataGrid = getDataFromID();
+        GridPane dataGrid = getDataFromID("requests");
         vBox.getChildren().add(dataGrid);
         vBox.getChildren().add(encodeButton);
         encodeButton.setOnAction(actionEvent -> {
             chancelleryMenu(stage);
             try {
-                encodeSingleData();
+                encodeSingleData("requests");
                 qrStatusLabel.setTextFill(Color.GREEN);
                 qrStatusLabel.setText("QR-код обращения " + numberField.getText() + " успешно создан!");
+                numberField.clear();
             } catch (SQLException | IOException | WriterException e) {
                 //throw new RuntimeException(e);
                 qrStatusLabel.setTextFill(Color.RED);
@@ -289,14 +423,136 @@ public class FirstWindow extends Application {
         stage.show();
     }
 
-    public void firstWorkerMenu(Stage stage){
+    public void printSeenMenu(Stage stage){
 
     }
 
+    public void firstWorkerMenu(Stage stage){
+        VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(25, 25, 25, 25));
+        root.getChildren().add(returnButton);
+        root.getChildren().add(getPreparedDataButton);
+        getPreparedDataButton.setVisible(true);
+        GridPane gridPane = new GridPane();
+        gridPane.setAlignment(Pos.CENTER);
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
+        getPreparedDataButton.setOnAction(actionEvent -> {
+            if(getUnseenFromDataBase("requests").length == 0){
+                getPreparedDataButton.setVisible(false);
+            }
+            printEncodedData(gridPane, "requests");
+            if(gridPane.getChildren().isEmpty()){
+                getPreparedDataButton.setVisible(false);
+            }
+            else{
+                gridPane.add(decodeButton, 0, 6);
+                gridPane.add(numberField, 1, 6);
+                getPreparedDataButton.setVisible(true);
+            }
+        });
+        decodeButton.setOnAction(actionEvent -> {
+            try {
+                firstSenderMenu(stage);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        root.getChildren().add(gridPane);
+        Scene scene = new Scene(root, height, width);
+        stage.setScene(scene);
+        stage.setTitle("Офис 1");
+        stage.show();
+    }
 
+    public void firstSenderMenu(Stage stage) throws SQLException {
+        VBox vBox = new VBox();
+        vBox.setAlignment(Pos.CENTER);
+        vBox.setSpacing(20);
+        TextField decodedData = new TextField();
+        decodedData.setText(decodeSingleData());
+        decodedData.setPrefWidth(400);
+        vBox.getChildren().add(decodedData);
+        vBox.getChildren().add(sendToDataBaseButton);
+        sendToDataBaseButton.setOnAction(actionEvent -> {
+            try {
+                prepareToSend(decodedData.getText());
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        Scene scene = new Scene(vBox, height, width);
+        stage.setScene(scene);
+        stage.setTitle("Обращение");
+        stage.show();
+    }
+
+    void managerMenu(Stage stage){
+        VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(25, 25, 25, 25));
+        root.getChildren().add(returnButton);
+        root.getChildren().add(getSentDataButton);
+        GridPane gridPane = new GridPane();
+        root.getChildren().add(gridPane);
+        gridPane.setAlignment(Pos.CENTER);
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
+        getSentDataButton.setVisible(true);
+        getSentDataButton.setOnAction(actionEvent -> {
+            if(getUnseenFromDataBase("printed_requests").length == 0){
+                getSentDataButton.setVisible(false);
+            }
+            printScannedData(gridPane, "printed_requests");
+            if(gridPane.getChildren().isEmpty()){
+                getSentDataButton.setVisible(false);
+            }
+            else{
+                gridPane.add(resolutionButton, 0, 6);
+                gridPane.add(numberField, 1, 6);
+                getSentDataButton.setVisible(true);
+            }
+        });
+        resolutionButton.setOnAction(actionEvent -> {
+            try {
+                resolutionMenu(stage);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        Scene scene = new Scene(root, height, width);
+        stage.setScene(scene);
+        stage.setTitle("Руководитель");
+        stage.show();
+    }
+
+    void resolutionMenu(Stage stage) throws SQLException {
+        VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(25, 25, 25, 25));
+        int id = Integer.parseInt(numberField.getText());
+        GridPane gridPane = dataToResolution(client.getCurrentID("printed_requests", id));
+        root.getChildren().add(gridPane);
+        gridPane.setAlignment(Pos.CENTER);
+        gridPane.setHgap(10);
+        gridPane.setVgap(10);
+        root.getChildren().add(setResolution);
+        setResolution.setOnAction(actionEvent -> sendResolution("printed_requests",
+                resolutionField.getText(), Boolean.parseBoolean(toggleButton.getText()),
+                infoField.getText(), id));
+        Scene scene = new Scene(root, height, width);
+        stage.setScene(scene);
+        stage.setTitle("Резолюция по обращению");
+        stage.show();
+    }
 
     public void secondWorkerMenu(Stage stage){
 
+    }
+
+    public void secondSenderMenu(){
+        
     }
 
     @Override
@@ -306,13 +562,8 @@ public class FirstWindow extends Application {
         connectButton.setOnAction(actionEvent -> mainMenu(stage));
         userButton.setOnAction(actionEvent -> userMenu(stage));
         chancelleryButton.setOnAction(actionEvent -> chancelleryMenu(stage));
-        printRequestButton.setOnAction(actionEvent -> {
-            try {
-                printMenu(stage);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
-            }
-        });
+        firstWorkerButton.setOnAction(actionEvent -> firstWorkerMenu(stage));
+        managerButton.setOnAction(actionEvent -> managerMenu(stage));
         /*
         SQLClient client = new SQLClient();
 
