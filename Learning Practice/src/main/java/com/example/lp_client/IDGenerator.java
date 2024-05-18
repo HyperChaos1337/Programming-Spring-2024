@@ -1,4 +1,4 @@
-package com.example.lp_client;
+package com.example.lp;
 
 import java.util.HashSet;
 import java.util.Random;

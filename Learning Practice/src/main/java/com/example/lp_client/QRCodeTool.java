@@ -1,4 +1,4 @@
-package com.example.lp_client;
+package com.example.lp;
 
 import com.google.zxing.*;
 import com.google.zxing.client.j2se.BufferedImageLuminanceSource;
@@ -20,9 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class QRCodeTool {
-    public static void generateQRCode(String recordString, int id) throws WriterException, SQLException, IOException {
+    public static void generateQRCode(String recordString, int id, String filename) throws WriterException, SQLException, IOException {
 
-        String filename = "request_ID_" + String.valueOf(id) + ".png";
         try {
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
 
