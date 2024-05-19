@@ -1,6 +1,7 @@
 package com.example.lp;
 
 import java.sql.*;
+import java.util.Objects;
 
 public class SQLClient {
 
@@ -35,7 +36,7 @@ public class SQLClient {
             pstmt.setString(6, contents);
             pstmt.setString(7, resolution);
             //Устанавливаем статус отдельно
-            if(status != null)
+            if (status != null)
                 pstmt.setBoolean(8, status);
             else
                 pstmt.setNull(8, Types.BOOLEAN);
@@ -47,9 +48,10 @@ public class SQLClient {
             System.err.println(e.getMessage());
         }
     }
+
     //Обновление данных в БД (после рассмотрения руководителем)
     void updateData(String dataBase, String tableName, String resolution,
-                    boolean status, String info, int id){
+                    boolean status, String info, int id) {
         String sql = "UPDATE " + tableName + " SET resolution = (?), status = (?), additional_info = (?) WHERE id = (?)";
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -68,9 +70,9 @@ public class SQLClient {
     }
 
     //Получаем все id из БД
-    public String getEachID(String dataBase, String tableName, boolean isDataSeen){
+    public String getEachID(String dataBase, String tableName, boolean isDataSeen) {
         String sql = "SELECT id FROM " + tableName + " WHERE status";
-        if(!isDataSeen) sql += " IS NULL";
+        if (!isDataSeen) sql += " IS NULL";
         else sql += " IS NOT NULL";
         StringBuilder data = new StringBuilder();
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
@@ -90,7 +92,7 @@ public class SQLClient {
 
     //Получаем информацию по id в виде "имя столбца1: значение;..."
     public String getCurrentID(String dataBase, String tableName, int id) throws SQLException {
-        String sql = "SELECT * FROM " +  tableName + " WHERE id = ?";
+        String sql = "SELECT * FROM " + tableName + " WHERE id = ?";
         StringBuilder recordString = new StringBuilder();
 
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
@@ -128,6 +130,38 @@ public class SQLClient {
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    //Проверка статуса заявки
+    public String getUserInformation(String dataBase, String tableName, String applicant) throws SQLException {
+        String data;
+        String sql = "SELECT id, resolution, status, additional_info FROM " + tableName + " WHERE applicant = ?";
+        try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, applicant);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                int id = rs.getInt("id");
+                String resolution = rs.getString("resolution");
+                boolean statusValue = rs.getBoolean("status");
+                String additionalInfo = rs.getString("additional_info");
+
+                String statusString = "Создано";
+                if (statusValue) {
+                    statusString = statusString.replace("Создано", "Рассмотренно");
+                } else {
+                    statusString = statusString.replace("Создано", "Отклонено");;
+                }
+                data = "ID: " + id + "; Резолюция: " + resolution + "; Статус: " + statusString +
+                        "; Дополнительная информация: " + additionalInfo;
+                return data;
+            }
+            else{
+                return "Данное обращение отсутствует в БД. Возможно, оно еще не было декодировано" +
+                        " или данные введены некорректно";
+            }
         }
     }
 }

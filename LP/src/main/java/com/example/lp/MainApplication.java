@@ -80,6 +80,10 @@ public class MainApplication extends Application {
         return client.getEachID(dataBase, tableName, isDataSeen).split("; ");
     }
 
+    private String printRequestInfo(String dataBase, String tableName, String applicant) throws SQLException {
+        return client.getUserInformation(dataBase, tableName, applicant);
+    }
+
     //Проверка ввода идентификатора на валидность
     private boolean isValidInput(TextField textField, GridPane gridPane) {
         if (textField.getText().isEmpty()) {
@@ -279,11 +283,18 @@ public class MainApplication extends Application {
         contentsLabel = new Label("Пояснение к причине");
         statusLabel = new Label();
 
+        //Для возможности посмотреть обращение по ФИО
+        Label getRequestLabel = new Label("Или введите ФИО для просмотра статуса созданной заявки");
+        Label getRequestInfo = new Label();
+        Button getRequestButton = new Button("Отследить статус заявки");
+
         applicantField = new TextField();
         managerField = new TextField();
         addressField = new TextField();
         matterField = new TextField();
         contentsField = new TextField();
+
+        TextField getRequestField = new TextField();
 
         GridPane menuPane = new GridPane();
         menuPane.setMaxSize(height, width);
@@ -326,7 +337,8 @@ public class MainApplication extends Application {
                             address, matter, contents, "Рассматривается",
                             null,"По усмотрению руководителя");
                     statusLabel.setTextFill(Color.GREEN);
-                    statusLabel.setText("Заявка принята! Ее номер: " + String.valueOf(id));
+                    statusLabel.setText("Заявка принята! Ее номер: " + String.valueOf(id) + ". Ожидайте" +
+                            " декодирования и/или рассмотрения");
                     applicantField.clear();
                     managerField.clear();
                     addressField.clear();
@@ -341,6 +353,28 @@ public class MainApplication extends Application {
         vBox.getChildren().add(menuPane);
         vBox.getChildren().add(senderButton);
         vBox.getChildren().add(statusLabel);
+        vBox.getChildren().add(getRequestLabel);
+        vBox.getChildren().add(getRequestField);
+        vBox.getChildren().add(getRequestButton);
+        vBox.getChildren().add(getRequestInfo);
+        getRequestButton.setOnAction(actionEvent -> {
+
+            //Получаем данные по созданной заявке, если она декодирована
+            if(getRequestField.getText().isEmpty()){
+                getRequestInfo.setTextFill(Color.RED);
+                getRequestInfo.setText("Поле не заполнено");
+            }
+            else {
+                try {
+                    getRequestInfo.setText(
+                            printRequestInfo(client.FIRST_HOST, client.PRINTED_REQUESTS, getRequestField.getText()));
+                    getRequestField.clear();
+                } catch (SQLException e) {
+                    //throw new RuntimeException(e);
+                }
+            }
+        });
+        getRequestField.setMaxWidth(300);
         vBox.setAlignment(Pos.CENTER);
         vBox.setMaxSize(height, width);
         Scene scene = new Scene(vBox, height, width);
