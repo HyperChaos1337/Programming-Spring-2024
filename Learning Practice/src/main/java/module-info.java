@@ -1,4 +1,4 @@
-module com.example.lp_client {
+module com.example.lp {
     requires javafx.controls;
     requires javafx.fxml;
     requires javafx.web;
@@ -15,6 +15,6 @@ module com.example.lp_client {
     requires com.google.zxing.javase;
     requires java.desktop;
 
-    opens com.example.lp_client to javafx.fxml;
-    exports com.example.lp_client;
+    opens com.example.lp to javafx.fxml;
+    exports com.example.lp;
 }
