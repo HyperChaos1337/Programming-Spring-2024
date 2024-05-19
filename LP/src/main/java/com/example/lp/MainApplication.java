@@ -20,21 +20,27 @@ import java.util.ArrayList;
 
 public class MainApplication extends Application {
 
+    //Размеры окна приложения
     int height = 800, width = 600;
 
     SQLClient client = new SQLClient();
 
+    //Дополнительные переменные для меню "Канцелярия" и Резолюция
     boolean value = false;
     int option = 0;
 
+    //Текстовые поля для заявителя
     TextField applicantField, managerField, addressField,
             matterField, contentsField;
     Label mainLabel, applicantLabel, managerLabel, addressLabel,
             matterLabel, contentsLabel, statusLabel;
 
+    //Заранее инициализируем 2 поля для ввода номера и статуса сканирования
+    // (понадобятся в будущем в нескольких окнах)
     TextField numberField = new TextField();
     Label qrStatusLabel = new Label();
 
+    //Заранее инициализируем необходимые кнопки
     Button connectButton = new Button("Подключение к бд");
 
     Button userButton = new Button("Я заявитель");
@@ -62,16 +68,46 @@ public class MainApplication extends Application {
     Label statusRenewLabel = new Label("Статус");
     Label infoLabel = new Label("Дополнительная информация");
 
+    //Дополнительные объекты для меню "Резолюция"
     TextField resolutionField = new TextField();
     Button toggleButton = new Button(String.valueOf(false));
 
     Button setResolution = new Button("Создать резолюцию");
     TextField infoField = new TextField();
 
+    //Получаем данные из БД в виде массива строк
     private String[] getFromDataBase(String dataBase, String tableName, boolean isDataSeen){
         return client.getEachID(dataBase, tableName, isDataSeen).split("; ");
     }
 
+    //Проверка ввода идентификатора на валидность
+    private boolean isValidInput(TextField textField, GridPane gridPane) {
+        if (textField.getText().isEmpty()) {
+            return false;
+        }
+        int inputValue;
+        try {
+            inputValue = Integer.parseInt(textField.getText());
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        for (javafx.scene.Node node : gridPane.getChildren()) {
+            if (node instanceof TextField) {
+                TextField gridTextField = (TextField) node;
+                try {
+                    int gridValue = Integer.parseInt(gridTextField.getText());
+                    if (gridValue == inputValue) {
+                        return true; // Значение найдено в GridPane
+                    }
+                } catch (NumberFormatException e) {
+                    // Пропускаем элементы, которые не являются целыми числами
+                }
+            }
+        }
+        return false;
+    }
+
+    //Печатаем идентификаторы полученных данных, которые еще не закодированы
     private void printReceivedData(GridPane gridPane, String fileFormat, String[] received){
         int row = 0, col = 0;
         for(String data: received){
@@ -89,6 +125,7 @@ public class MainApplication extends Application {
         }
     }
 
+    //Печатаем идентификаторы полученных данных, которые уже были закодированы
     private void printEncodedData(GridPane gridPane, String fileFormat, String[] encoded){
         int row = 0, col = 0;
         for(String data: encoded) {
@@ -106,6 +143,7 @@ public class MainApplication extends Application {
         }
     }
 
+    //Получаем отсканированные данные по заданным условиям
     private void printScannedData(GridPane gridPane, String[] scanned){
         int row = 0, col = 0;
         for(String data: scanned){
@@ -119,6 +157,7 @@ public class MainApplication extends Application {
         }
     }
 
+    //Выводим данные из строки в виде сетки
     private GridPane getDataFromID(String dataBase, String tableName) throws SQLException {
         int id = Integer.parseInt(numberField.getText());
         String data = client.getCurrentID(dataBase, tableName, id);
@@ -143,6 +182,7 @@ public class MainApplication extends Application {
         return grid;
     }
 
+    //Подготавливаем данные к отправке
     private void prepareToSend(String dataBase, String dataToSend, String tableName) throws SQLException {
         ArrayList<String> data = new ArrayList<>();
         String[] pairs = dataToSend.split("; ");
@@ -151,26 +191,31 @@ public class MainApplication extends Application {
             data.add(entries[1]);
         }
 
+        // Проверка на "null"
         Boolean status = null;
-        if (!data.get(7).equalsIgnoreCase("null")) { // Проверка на "null"
+        if (!data.get(7).equalsIgnoreCase("null")) {
             status = Boolean.valueOf(data.get(7));
         }
 
+        //Вставка данных в таблицу
         client.insertData(dataBase, tableName, Integer.parseInt(data.get(0)),
                 data.get(1), data.get(2), data.get(3), data.get(4),
                 data.get(5), data.get(6), status, data.get(8));
     }
 
+    //Кодирование данных
     private void encodeSingleData(String dataBase, String tableName, String fileName) throws SQLException, IOException, WriterException {
         int id = Integer.parseInt(numberField.getText());
         String data = client.getCurrentID(dataBase, tableName ,id);
         QRCodeTool.generateQRCode(data, fileName);
     }
 
+    //Декодирование данных
     private String decodeSingleData(String imagePath) throws SQLException {
         return QRCodeTool.decodeQRCode(imagePath);
     }
 
+    //Печатаем данные для подготовки к созданию резолюции
     private GridPane dataToResolution(String inputString) {
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
@@ -206,10 +251,12 @@ public class MainApplication extends Application {
         return grid;
     }
 
+    //Отправляем резолюцию в БД, обновляя данные
     private void sendResolution(String dataBase, String tableName, String resolution, boolean status, String info, int id){
         client.updateData(dataBase, tableName, resolution, status, info, id);
     }
 
+    //Основное меню программы
     private void mainMenu(Stage stage){
         VBox vBox = new VBox(userButton, chancelleryButton, managerButton,
                 firstWorkerButton, secondWorkerButton);
@@ -221,6 +268,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню заявителя
     private void userMenu(Stage stage){
 
         mainLabel = new Label("Добро пожаловать в сервис социальных услуг! Заполните анкету");
@@ -259,6 +307,7 @@ public class MainApplication extends Application {
 
         VBox vBox = new VBox(returnButton, mainLabel);
 
+        //Биндим на кнопку создание заявки
         senderButton.setOnAction(actionEvent -> {
             String applicant = applicantField.getText();
             String manager = managerField.getText();
@@ -302,6 +351,7 @@ public class MainApplication extends Application {
 
     }
 
+    //Меню работника
     private void chancelleryMenu(Stage stage){
         VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
         root.setAlignment(Pos.CENTER);
@@ -316,7 +366,14 @@ public class MainApplication extends Application {
         gridPane.setAlignment(Pos.CENTER);
         gridPane.setHgap(10);
         gridPane.setVgap(10);
+
+        //Биндим на кнопки вывод необходимых данных,
+        //изменяя переменную option в зависимости от нажатой кнопки
         getUnpreparedDataButton.setOnAction(actionEvent -> {
+            numberField.clear();
+            gridPane.getChildren().clear();
+            getUnpreparedDataButton.setDisable(true);
+            getSeenDataButton.setDisable(false);
             if(getFromDataBase(client.FIRST_HOST,
                     client.REQUESTS, false)[0].isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
@@ -341,6 +398,10 @@ public class MainApplication extends Application {
             }
         });
         getSeenDataButton.setOnAction(actionEvent -> {
+            numberField.clear();
+            gridPane.getChildren().clear();
+            getSeenDataButton.setDisable(true);
+            getUnpreparedDataButton.setDisable(false);
             if(getFromDataBase(client.FIRST_HOST,
                     client.PRINTED_REQUESTS, true)[0].isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
@@ -362,14 +423,24 @@ public class MainApplication extends Application {
                 }
             }
         });
+
+        //Кнопка для перехода в одно из двух меню
         printRequestButton.setOnAction(actionEvent -> {
-            try {
-                if(option == 1)
-                    printMenu(stage);
-                if(option == 2)
-                    printSeenMenu(stage);
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+            if(!isValidInput(numberField, gridPane)){
+                qrStatusLabel.setTextFill(Color.RED);
+                qrStatusLabel.setText("Что-то пошло не так. Проверьте корректность введенных данных");
+            }
+            else{
+                try {
+                    if(option == 1)
+                        printMenu(stage);
+                    if(option == 2)
+                        printSeenMenu(stage);
+                } catch (SQLException e) {
+                    qrStatusLabel.setTextFill(Color.RED);
+                    qrStatusLabel.setText("Заявка с номером " + numberField.getText() + " отсутсвует или " +
+                            "по каким-то причинам недоступна");
+                }
             }
         });
         root.getChildren().add(gridPane);
@@ -379,6 +450,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню создания QR для нерассмотренных заявок
     private void printMenu(Stage stage) throws SQLException {
         VBox vBox = new VBox();
         vBox.setAlignment(Pos.CENTER);
@@ -386,6 +458,8 @@ public class MainApplication extends Application {
         GridPane dataGrid = getDataFromID(client.FIRST_HOST, client.REQUESTS);
         vBox.getChildren().add(dataGrid);
         vBox.getChildren().add(encodeButton);
+
+        //Создание файла с кодом
         encodeButton.setOnAction(actionEvent -> {
             chancelleryMenu(stage);
             try {
@@ -395,7 +469,6 @@ public class MainApplication extends Application {
                 qrStatusLabel.setText("QR-код обращения " + numberField.getText() + " успешно создан!");
                 numberField.clear();
             } catch (SQLException | IOException | WriterException e) {
-                //throw new RuntimeException(e);
                 qrStatusLabel.setTextFill(Color.RED);
                 qrStatusLabel.setText("Не удалось создать QR-код обращения " + numberField.getText() +
                         ". Повторите попытку позже");
@@ -408,6 +481,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню создания QR для рассмотренных заявок
     private void printSeenMenu(Stage stage) throws SQLException {
         VBox vBox = new VBox();
         vBox.setAlignment(Pos.CENTER);
@@ -415,6 +489,8 @@ public class MainApplication extends Application {
         GridPane dataGrid = getDataFromID(client.FIRST_HOST, client.PRINTED_REQUESTS);
         vBox.getChildren().add(dataGrid);
         vBox.getChildren().add(encodeButton);
+
+        //Создание файла с кодом
         encodeButton.setOnAction(actionEvent -> {
             chancelleryMenu(stage);
             try {
@@ -438,19 +514,25 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню работника Офиса 1
     private void firstWorkerMenu(Stage stage){
-        VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
+        VBox root = new VBox(10);
         root.setAlignment(Pos.CENTER);
         root.setPadding(new Insets(25, 25, 25, 25));
         root.getChildren().add(qrStatusLabel);
         root.getChildren().add(returnButton);
         root.getChildren().add(getPreparedDataButton);
         getPreparedDataButton.setVisible(true);
+        getPreparedDataButton.setDisable(false);
         GridPane gridPane = new GridPane();
         gridPane.setAlignment(Pos.CENTER);
         gridPane.setHgap(10);
         gridPane.setVgap(10);
+
+        //Смотрим закодированные заявки
         getPreparedDataButton.setOnAction(actionEvent -> {
+            gridPane.getChildren().clear();
+            getPreparedDataButton.setDisable(false);
             if(getFromDataBase(client.FIRST_HOST,
                     client.REQUESTS, false)[0].isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
@@ -472,7 +554,10 @@ public class MainApplication extends Application {
                 }
             }
         });
+
+        //Декодируем заявку и отправляем в БД
         decodeButton.setOnAction(actionEvent -> {
+            gridPane.getChildren().clear();
             try {
                 if(client.isIdExists(client.FIRST_HOST,
                         client.PRINTED_REQUESTS, Integer.parseInt(numberField.getText()))){
@@ -494,6 +579,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню отправки в БД декодированной заявки (с возможностью редактирования)
     private void firstSenderMenu(Stage stage) throws SQLException {
         VBox vBox = new VBox();
         vBox.setAlignment(Pos.CENTER);
@@ -504,6 +590,8 @@ public class MainApplication extends Application {
         vBox.getChildren().add(decodedData);
         vBox.getChildren().add(sendToDataBaseButton);
         sendToDataBaseButton.setVisible(true);
+
+        //Отправка в бд
         sendToDataBaseButton.setOnAction(actionEvent -> {
             try{
                 firstWorkerMenu(stage);
@@ -526,8 +614,9 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню руководителя
     private void managerMenu(Stage stage){
-        VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
+        VBox root = new VBox(10);
         root.setAlignment(Pos.CENTER);
         root.setPadding(new Insets(25, 25, 25, 25));
         root.getChildren().add(qrStatusLabel);
@@ -539,7 +628,12 @@ public class MainApplication extends Application {
         gridPane.setHgap(10);
         gridPane.setVgap(10);
         getSentDataButton.setVisible(true);
+        getSentDataButton.setDisable(false);
+
+        //Получаем номера декодированных заявок
         getSentDataButton.setOnAction(actionEvent -> {
+            gridPane.getChildren().clear();
+            getSentDataButton.setDisable(true);
             if(getFromDataBase(client.FIRST_HOST,
                     client.PRINTED_REQUESTS, false)[0].isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
@@ -563,6 +657,8 @@ public class MainApplication extends Application {
             }
 
         });
+
+        //Переходим к резолюции
         resolutionButton.setOnAction(actionEvent -> {
             try {
                 resolutionMenu(stage);
@@ -576,6 +672,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню создания резолюции
     private void resolutionMenu(Stage stage) throws SQLException {
         VBox root = new VBox(10); // Создаем VBox для размещения кнопки и GridPane
         root.setAlignment(Pos.CENTER);
@@ -588,11 +685,14 @@ public class MainApplication extends Application {
         gridPane.setHgap(10);
         gridPane.setVgap(10);
         root.getChildren().add(setResolution);
+
+        //Создаем резолюцию и обновляем данные в БД
         setResolution.setOnAction(actionEvent -> {
             managerMenu(stage);
             sendResolution(client.FIRST_HOST, client.PRINTED_REQUESTS,
                     resolutionField.getText(), Boolean.parseBoolean(toggleButton.getText()),
                     infoField.getText(), id);
+            qrStatusLabel.setTextFill(Color.GREEN);
             qrStatusLabel.setText("Резолюция по обращению " + numberField.getText() +
                     " успешно отправлена в бд");
             numberField.clear();
@@ -603,6 +703,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню работника офиса 2
     private void secondWorkerMenu(Stage stage){
         VBox root = new VBox(10);
         root.setAlignment(Pos.CENTER);
@@ -611,11 +712,16 @@ public class MainApplication extends Application {
         root.getChildren().add(returnButton);
         root.getChildren().add(getPreparedDataButton);
         getPreparedDataButton.setVisible(true);
+        getPreparedDataButton.setDisable(false);
         GridPane gridPane = new GridPane();
         gridPane.setAlignment(Pos.CENTER);
         gridPane.setHgap(10);
         gridPane.setVgap(10);
+
+        //Печать закодированных рассмотренных заявок
         getPreparedDataButton.setOnAction(actionEvent -> {
+            gridPane.getChildren().clear();
+            getPreparedDataButton.setDisable(true);
             if(getFromDataBase(client.FIRST_HOST,
                     client.PRINTED_REQUESTS, true)[0].isEmpty()){
                 qrStatusLabel.setTextFill(Color.YELLOWGREEN);
@@ -638,6 +744,8 @@ public class MainApplication extends Application {
                 }
             }
         });
+
+        //Декодирование рассмотренных сообщений
         decodeButton.setOnAction(actionEvent -> {
             try {
                 if(client.isIdExists(client.SECOND_HOST,client.SEEN_REQUESTS,
@@ -660,6 +768,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Меню отправки сообщений в БД из офиса 2
     private void secondSenderMenu(Stage stage) throws SQLException {
         VBox vBox = new VBox();
         vBox.setAlignment(Pos.CENTER);
@@ -672,6 +781,8 @@ public class MainApplication extends Application {
         vBox.getChildren().add(decodedData);
         vBox.getChildren().add(sendToDataBaseButton);
         sendToDataBaseButton.setVisible(true);
+
+        //Отправка результатов в БД2
         sendToDataBaseButton.setOnAction(actionEvent -> {
             try{
                 secondWorkerMenu(stage);
@@ -693,6 +804,7 @@ public class MainApplication extends Application {
         stage.show();
     }
 
+    //Инициализация кнопок основного меню
     @Override
     public void start(Stage stage) throws IOException {
         mainMenu(stage);
@@ -708,6 +820,7 @@ public class MainApplication extends Application {
         secondWorkerButton.setOnAction(actionEvent -> secondWorkerMenu(stage));
     }
 
+    //Запуск программы
     public static void main(String[] args){
         launch();
     }
