@@ -7,21 +7,17 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 import com.google.zxing.qrcode.QRCodeWriter;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class QRCodeTool {
-    public static void generateQRCode(String recordString, int id, String filename) throws WriterException, SQLException, IOException {
-
+    public static void generateQRCode(String recordString, String filename) throws WriterException, SQLException, IOException {
         try {
             QRCodeWriter qrCodeWriter = new QRCodeWriter();
 

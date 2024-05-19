@@ -1,20 +1,23 @@
 package com.example.lp;
 
-import java.lang.reflect.Type;
 import java.sql.*;
 
 public class SQLClient {
 
+    //Имена баз данных
     public final String FIRST_HOST = "jdbc:postgresql://localhost:5432/Office1";
     public final String SECOND_HOST = "jdbc:postgresql://localhost:5432/Office2";
 
+    //Имена таблиц
     public final String REQUESTS = "requests";
     public final String PRINTED_REQUESTS = "printed_requests";
     public final String SEEN_REQUESTS = "seen_requests";
 
+    //Данные пользователя
     private final String PASSWORD = "ChaosNova2020";
     private final String USER = "postgres";
 
+    //Запрос на отправку данных
     public void insertData(String dataBase, String tableName, int id, String applicant, String manager,
                            String address, String matter, String contents,
                            String resolution, Boolean status, String additionalInfo) throws SQLException {
@@ -23,6 +26,7 @@ public class SQLClient {
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
+            //Устанавливаем типы вводимых данных
             pstmt.setInt(1, id);
             pstmt.setString(2, applicant);
             pstmt.setString(3, manager);
@@ -30,10 +34,12 @@ public class SQLClient {
             pstmt.setString(5, matter);
             pstmt.setString(6, contents);
             pstmt.setString(7, resolution);
+            //Устанавливаем статус отдельно
             if(status != null)
                 pstmt.setBoolean(8, status);
             else
                 pstmt.setNull(8, Types.BOOLEAN);
+            //Устанавливаем дополнительную информацию
             pstmt.setString(9, additionalInfo);
             pstmt.executeUpdate();
 
@@ -41,13 +47,14 @@ public class SQLClient {
             System.err.println(e.getMessage());
         }
     }
-    
+    //Обновление данных в БД (после рассмотрения руководителем)
     void updateData(String dataBase, String tableName, String resolution,
                     boolean status, String info, int id){
         String sql = "UPDATE " + tableName + " SET resolution = (?), status = (?), additional_info = (?) WHERE id = (?)";
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
+            //Подготовка данных к отправке
             pstmt.setString(1, resolution);
             pstmt.setBoolean(2, status);
             pstmt.setString(3, info);
@@ -60,7 +67,7 @@ public class SQLClient {
         }
     }
 
-
+    //Получаем все id из БД
     public String getEachID(String dataBase, String tableName, boolean isDataSeen){
         String sql = "SELECT id FROM " + tableName + " WHERE status";
         if(!isDataSeen) sql += " IS NULL";
@@ -69,6 +76,7 @@ public class SQLClient {
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
+            //Пока запрос не пустой, формируем строку
             while (rs.next()) {
                 int id = rs.getInt("id");
                 data.append(id);
@@ -80,6 +88,7 @@ public class SQLClient {
         return data.toString();
     }
 
+    //Получаем информацию по id в виде "имя столбца1: значение;..."
     public String getCurrentID(String dataBase, String tableName, int id) throws SQLException {
         String sql = "SELECT * FROM " +  tableName + " WHERE id = ?";
         StringBuilder recordString = new StringBuilder();
@@ -92,7 +101,7 @@ public class SQLClient {
 
             ResultSetMetaData metaData = rs.getMetaData();
             int columnCount = metaData.getColumnCount();
-
+            //Пока запрос не пустой, формируем строку
             if (rs.next()) {
                 for (int i = 1; i <= columnCount; i++) {
                     String columnName = metaData.getColumnName(i);
@@ -106,6 +115,8 @@ public class SQLClient {
 
         return recordString.toString();
     }
+
+    //Проверяем наличие id в БД
     public boolean isIdExists(String dataBase, String tableName, int id) {
         String sql = "SELECT id FROM " + tableName + " WHERE id = (?)";
         try (Connection conn = DriverManager.getConnection(dataBase, USER, PASSWORD);
@@ -113,7 +124,7 @@ public class SQLClient {
 
             pstmt.setInt(1, id);
             ResultSet resultSet = pstmt.executeQuery();
-            return !resultSet.next();
+            return resultSet.next();
 
         } catch (SQLException e) {
             throw new RuntimeException(e);
