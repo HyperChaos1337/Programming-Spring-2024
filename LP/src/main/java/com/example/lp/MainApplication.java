@@ -442,7 +442,8 @@ public class MainApplication extends Application {
                 qrStatusLabel.setText("На данный момент все заявки рассмотрены. Вернитесь позже");
                 getSeenDataButton.setVisible(false);
             }else{
-                printScannedData(gridPane, getFromDataBase(client.FIRST_HOST,
+                printReceivedData(gridPane, "_solved.png",
+                        getFromDataBase(client.FIRST_HOST,
                         client.PRINTED_REQUESTS, true));
                 if(gridPane.getChildren().isEmpty()){
                     qrStatusLabel.setTextFill(Color.YELLOWGREEN);

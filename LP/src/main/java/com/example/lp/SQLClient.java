@@ -107,8 +107,17 @@ public class SQLClient {
             if (rs.next()) {
                 for (int i = 1; i <= columnCount; i++) {
                     String columnName = metaData.getColumnName(i);
-                    String columnValue = rs.getString(i);
-                    recordString.append(columnName).append(": ").append(columnValue).append("; ");
+                    Object columnValue = rs.getObject(i);
+
+                    if (columnValue == null) {
+                        recordString.append(columnName).append(": ").append("null").append("; ");
+                    } else if (columnValue instanceof Boolean) {
+                        recordString.append(columnName).append(": ").append(columnValue).append("; ");
+                    } else if (columnValue instanceof Number) {
+                        recordString.append(columnName).append(": ").append(columnValue).append("; ");
+                    } else {
+                        recordString.append(columnName).append(": ").append(columnValue).append("; ");
+                    }
                 }
             } else {
                 throw new SQLException("Запись с ID " + id + " не найдена.");
