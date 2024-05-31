@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Результат</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 5px;
+        }
+        .container {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        button {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .container th, .container td {
+            border: 1px solid black;
+            padding: 10px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>Полученные данные транслированы в QR-код</h1>
+
+    <table class="container">
+        <tbody>
+            <tr th:each="row : ${dataToDisplay}">
+                <td th:text="${row[0]}"></td>
+                <td th:text="${row[1]}"></td>
+            </tr>
+        </tbody>
+    </table>
+    <button onclick="window.location.href='/chancery'">Вернуться в канцелярию</button>
+</body>
+</html>

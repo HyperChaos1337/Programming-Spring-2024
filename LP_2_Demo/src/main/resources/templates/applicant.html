@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Заявитель</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 120vh;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 5px;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            width: 600px;
+        }
+        label {
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        input[type="submit"] {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            text-decoration: none;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Добро пожаловать в сервис социальных услуг!</h1>
+    <form action="/applicant/submit" method="post">
+        <label for="field1">ФИО Заявителя:</label>
+        <input type="text" id="field1" name="field1"><br><br>
+
+        <label for="field2">ФИО Руководителя:</label>
+        <input type="text" id="field2" name="field2"><br><br>
+
+        <label for="field3">Адрес:</label>
+        <input type="text" id="field3" name="field3"><br><br>
+
+        <label for="field4">Причина заявки:</label>
+        <input type="text" id="field4" name="field4"><br><br>
+
+        <label for="field5">Пояснение к причине:</label>
+        <input type="text" id="field5" name="field5"><br><br>
+
+        <input type="submit" value="Отправить">
+    </form>
+
+    <form action="/applicant/submit2" method="post">
+        <label for="field6">ФИО Заявителя:</label>
+        <input type="text" id="field6" name="field6"><br><br>
+
+        <input type="submit" value="Отправить">
+    </form>
+
+    <p th:text="${message}"></p>
+
+    <a href="/">Вернуться в главное меню</a>
+</body>
+</html>

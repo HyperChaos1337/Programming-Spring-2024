@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Печать декодированных данных</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 300px;
+        }
+
+        input[type="text"] {
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .data-container {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+            width: 500px; /* Ширина сетки */
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .data-key {
+            width: 200px; /* Ширина столбца с ключами */
+        }
+
+        .data-value {
+            width: 200px; /* Ширина столбца со значениями */
+            display: flex;
+            align-items: center;
+        }
+
+        .data-value input {
+            width: 100%;
+            margin-left: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .data-value button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .data-value button.active {
+            background-color: #f44336; /* Красный цвет для активной кнопки */
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .additional-data-container {
+            display: flex;
+            flex-direction: column;
+            margin-top: 20px;
+            width: 500px; /* Ширина сетки */
+            display: none; /* Скрыть по умолчанию */
+        }
+
+        .additional-data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .additional-data-key {
+            width: 200px; /* Ширина столбца с ключами */
+        }
+
+        .additional-data-value {
+            width: 200px; /* Ширина столбца со значениями */
+            display: flex;
+            align-items: center;
+        }
+
+        .additional-data-value input {
+            width: 100%;
+            margin-left: 10px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .additional-data-value button {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        .additional-data-value button.active {
+            background-color: #f44336; /* Красный цвет для активной кнопки */
+        }
+    </style>
+</head>
+<body>
+    <h1>Печать декодированных данных</h1>
+
+    <form method="post" action="/manager/print_decoded">
+        <label for="id">Введите ID:</label>
+        <input type="text" id="id" name="id"><br>
+        <button type="submit">Показать данные</button>
+    </form>
+
+<div th:if="${error}" class="error" th:text="${error}"></div>
+
+<div th:if="${data != null}" class="data-container">
+    <div th:each="entry : ${data}" class="data-row">
+        <div class="data-key" th:text="${entry.key}"></div>
+        <div class="data-value" th:if="${entry.key != 'resolution' and entry.key != 'status' and entry.key != 'additional_info'}" th:text="${entry.value}"></div>
+        <div class="data-value" th:if="${entry.key == 'resolution' or entry.key == 'status' or entry.key == 'additional_info'}" th:text="${entry.value}">
+                <span th:if="${entry.key == 'resolution'}" th:text="${entry.value}">
+                    <input type="text" th:value="${entry.value}">
+                </span>
+            <span th:if="${entry.key == 'additional_info'}" th:text="${entry.value}">
+                    <input type="text" th:value="${entry.value}">
+                </span>
+            <span th:if="${entry.key == 'status'}" th:text="${entry.value}">
+                    <button class="status-button" th:classappend="${entry.value == 'true' ? 'active' : ''}" th:onclick="toggleStatus(this)">
+                        <span th:if="${entry.value == 'true'}">True</span>
+                        <span th:if="${entry.value == 'false'}">False</span>
+                        <span th:if="${entry.value == 'null'}">Null</span>
+                    </button>
+                </span>
+        </div>
+    </div>
+</div>
+
+    <form action="/manager/update_data" method="post">
+        <label for="resolution"> Резолюция </label>
+        <input type="text" id="resolution" value="">
+        <label for="status"> Статус (True = рассмотрено, False = отклонено) </label>
+        <input type="text" id="status" value="">
+        <label for="info">Информация </label>
+        <input type="text" id="info" value="">
+        <label for="idValue">Идентификатор </label>
+        <input type="text" id="idValue" value="">
+        <button type="submit">Отправить резолюцию в БД</button>
+    </form>
+
+<script>
+    function showAdditionalData() {
+        document.querySelector('.additional-data-container').style.display = 'flex';
+    }
+
+    function toggleStatus(button) {
+        let isActive = button.classList.contains('active');
+        if (isActive) {
+            button.classList.remove('active');
+            button.textContent = 'False';
+            // Добавьте код для обновления статуса в БД
+        } else {
+            button.classList.add('active');
+            button.textContent = 'True';
+            // Добавьте код для обновления статуса в БД
+        }
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Печать QR-кодов</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        button {
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        input[type="text"] {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        a {
+            display: block;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 колонок */
+            gap: 10px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Печать QR-кодов</h1>
+
+    <div class="container">
+        <div th:each="data, status : ${dataToDisplay}">
+            <p th:text="${data}"></p>
+        </div>
+    </div>
+    <form method="get" action="/chancery/print_created/created_data">
+        <button type="submit">Записать заявку в QR-код</button>
+        <input type="text" id="id" name="id"><br><br>
+    </form>
+</body>
+</html>
